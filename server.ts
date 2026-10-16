@@ -5551,8 +5551,7 @@ interface WorkstreamOffer {
   createdAt: string;
   resolvedAt?: string;
   resolvedBy?: string;
-  /** Invoice payments create a new funded order; this is its id. */
-  fundedOrderId?: string;
+
 }
 
 const OFFERS_FILE = path.join(DATA_DIR, 'workstream_offers.json');
@@ -5789,7 +5788,6 @@ app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimi
         newOrder = enrichOrderWithServiceInfo(addOrder);
         recordOrder(newOrder);
         offer.status = 'accepted';
-        offer.fundedOrderId = addOrderId;
         postOfferMessage(newOrder, offer, null, `${offer.number} was accepted. A new funded workstream was created with $${offer.amount} in escrow.`, 'offer_accepted');
       }
     }

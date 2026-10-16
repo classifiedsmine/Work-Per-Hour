@@ -57,7 +57,7 @@ export interface WorkstreamOffer {
   createdAt: string;
   resolvedAt?: string;
   resolvedBy?: string;
-  fundedOrderId?: string;
+
   /** What the buyer is charged in total (amount + client fees), from the server's fee quote. */
   clientTotal?: number;
   currencySymbol?: string;

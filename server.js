@@ -36109,7 +36109,6 @@ app.post("/api/offers/:id/:action(accept|decline|cancel)", requireAuth, rateLimi
         newOrder = enrichOrderWithServiceInfo(addOrder);
         recordOrder(newOrder);
         offer.status = "accepted";
-        offer.fundedOrderId = addOrderId;
         postOfferMessage(newOrder, offer, null, `${offer.number} was accepted. A new funded workstream was created with $${offer.amount} in escrow.`, "offer_accepted");
       }
     }
