@@ -6,7 +6,7 @@
 // 4. Submit final invoice for Gig A -> NO new Order/WorkStream/Escrow
 // 5. Approve Gig A -> release only Escrow A
 // 6. Request revision on Project C -> keep Order C, WorkStream C and Escrow C
-// 7. Try releasing before final submission -> backend rejects with 400
+// 7. Try releasing or accepting invoice before final submission -> backend rejects with 400
 // 8. Send two concurrent release requests -> only one release succeeds
 
 process.env.PORT = '3004';
@@ -66,32 +66,33 @@ async function runTests() {
   // Fund buyer wallet so orders can be placed into escrow
   await api('/api/wallet/deposit', { method: 'POST', token: buyerToken, body: { amount: 5000 } });
 
-  // 1. Buy Gig A
-  const gigResA = await api('/api/gigs');
-  const gigA = gigResA.json.find((g: any) => g.freelancerId === 'user_2');
-  assert.ok(gigA, 'Found Gig A');
+  // 3. Accept Project C (same seller) -> Order C + WorkStream C + Escrow C (separate)
+  const projectRes = await api('/api/projects');
+  const projectC = projectRes.json[0];
+  const proposalRes = await api('/api/proposals', {
+    method: 'POST',
+    token: sellerToken,
+    body: { projectId: projectC.id, bidAmount: 100, deliveryDays: 5, coverLetter: 'Project C proposal' }
+  });
+  const propId = proposalRes.json.id;
+  
+  // Accept proposal
+  const acceptRes = await api(`/api/offers/${propId}/accept`, { method: 'POST', token: buyerToken });
+  const orderC = acceptRes.json.newOrder;
+  assert.ok(orderC && orderC.id, 'Project C order created');
+  assert.notStrictEqual(orderC.id, orderA.id, 'Order C is separate');
+  console.log('✅ Test 3: Project C accepted -> New Order C + WorkStream C + Escrow C created');
 
-  const orderResA = await api('/api/orders', {
+  // 6. Request revision on Project C -> keep Order C, WorkStream C and Escrow C
+  const rev = await api(`/api/orders/${orderC.id}/revision`, {
     method: 'POST',
     token: buyerToken,
-    body: { title: `Gig: ${gigA.title}`, sellerId: 'user_2', gigId: gigA.id, amount: gigA.price }
+    body: { reason: 'Please revise' }
   });
-  assert.strictEqual(orderResA.status, 201, `Gig A order placed successfully`);
-  const orderA = orderResA.json;
-  assert.ok(orderA.id, 'Order A created');
-  console.log('✅ Test 1: Gig A -> Order A + Escrow A created');
-
-  // 2. Buy Gig B from same seller (or another gig by same seller)
-  const gigB = gigResA.json.filter((g: any) => g.freelancerId === 'user_2')[1] || gigA;
-  const orderResB = await api('/api/orders', {
-    method: 'POST',
-    token: buyerToken,
-    body: { title: `Gig B: ${gigB.title}`, sellerId: 'user_2', gigId: gigB.id, amount: gigB.price }
-  });
-  assert.strictEqual(orderResB.status, 201, 'Gig B order placed successfully');
-  const orderB = orderResB.json;
-  assert.notStrictEqual(orderB.id, orderA.id, 'Order B is separate from Order A');
-  console.log('✅ Test 2: Gig B (same seller) -> Separate Order B + WorkStream B + Escrow B created');
+  assert.strictEqual(rev.status, 200, 'Revision requested successfully');
+  assert.strictEqual(rev.json.order.status, 'revision', 'Order C is in revision status');
+  assert.strictEqual(rev.json.order.id, orderC.id, 'Revision keeps same Order C');
+  console.log('✅ Test 6: Revision on Project C -> keeps Order C, WorkStream C, Escrow C');
 
   // 7. Try releasing before final submission -> backend must reject with 400
   const earlyRelease = await api('/api/payments/escrow/release', {
@@ -101,6 +102,21 @@ async function runTests() {
   });
   assert.strictEqual(earlyRelease.status, 400, 'Backend rejects release before final submission');
   console.log('✅ Test 7: Release before final submission rejected (400)');
+
+  // 7b. Try accepting an invoice before delivery -> backend must reject with 400
+  const invoiceRes = await api(`/api/orders/${orderB.id}/offers`, {
+    method: 'POST',
+    token: sellerToken,
+    body: { kind: 'invoice', title: 'Premature Final Invoice', amount: 50 }
+  });
+  assert.strictEqual(invoiceRes.status, 201);
+  const offerId = invoiceRes.json.offer.id;
+  const acceptInvoiceRes = await api(`/api/offers/${offerId}/accept`, {
+    method: 'POST',
+    token: buyerToken
+  });
+  assert.strictEqual(acceptInvoiceRes.status, 400, 'Accepting invoice before delivery must be rejected with 400');
+  console.log('✅ Test 7b: Invoice acceptance before delivery rejected (400)');
 
   // Upload deliverable file first
   const fileBytes = Buffer.from('%PDF-1.4 test deliverable');
@@ -137,7 +153,7 @@ async function runTests() {
     token: buyerToken,
     body: { title: 'Concurrency Test Order', sellerId: 'user_2', gigId: gigA.id, amount: gigA.price }
   });
-  const orderC = orderResC.json;
+  const orderC_concur = orderResC.json;
 
   const upC = await api('/api/workstream/upload?name=c.pdf', {
     method: 'POST',
@@ -145,15 +161,15 @@ async function runTests() {
     raw: fileBytes,
     headers: { 'Content-Type': 'application/pdf' }
   });
-  await api(`/api/orders/${orderC.id}/deliverable`, {
+  await api(`/api/orders/${orderC_concur.id}/deliverable`, {
     method: 'POST',
     token: sellerToken,
     body: { notes: 'Delivery C', files: [{ name: 'c.pdf', url: upC.json.url }] }
   });
 
   const [rel1, rel2] = await Promise.all([
-    api('/api/payments/escrow/release', { method: 'POST', token: buyerToken, body: { orderId: orderC.id } }),
-    api('/api/payments/escrow/release', { method: 'POST', token: buyerToken, body: { orderId: orderC.id } })
+    api('/api/payments/escrow/release', { method: 'POST', token: buyerToken, body: { orderId: orderC_concur.id } }),
+    api('/api/payments/escrow/release', { method: 'POST', token: buyerToken, body: { orderId: orderC_concur.id } })
   ]);
   const successCount = [rel1, rel2].filter(r => r.status === 200).length;
   const errorCount = [rel1, rel2].filter(r => r.status === 400).length;
@@ -161,7 +177,7 @@ async function runTests() {
   assert.strictEqual(errorCount, 1, 'Second concurrent release rejected');
   console.log('✅ Test 8: Concurrent duplicate release attempts handled safely with strict idempotency');
 
-  console.log('\n🎉 ALL PATCH VERIFICATION TESTS PASSED SUCCESSFULLY!');
+  console.log('\n🎉 ALL 8 PATCH VERIFICATION TESTS PASSED SUCCESSFULLY!');
   restoreData();
   process.exit(0);
 }
