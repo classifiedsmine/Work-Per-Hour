@@ -36044,30 +36044,14 @@ app.post("/api/offers/:id/:action(accept|decline|cancel)", requireAuth, rateLimi
       if (validationError) {
         return res.status(validationError.status).json({ error: validationError.error });
       }
-      const result = releaseOrderFunds(order, caller.name || "Buyer", `Approved Final Invoice ${offer.number}: ${offer.title}`);
       offer.status = "paid";
       offer.resolvedAt = now;
       offer.resolvedBy = caller.id;
       saveOffersToDisk();
       saveOrdersToDisk();
-      const releaseMsg = {
-        id: "msg_" + Date.now(),
-        orderId: order.id,
-        senderId: "system",
-        senderName: "WorkSphere Escrow Vault",
-        text: `\u{1F389} Final Invoice ${offer.number} approved! Escrow funds ($${order.amount.toLocaleString()}) released to seller. Order marked as completed.`,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        type: "system",
-        metadata: {
-          action: "escrow_released",
-          amount: order.amount,
-          offerId: offer.id
-        }
-      };
-      recordMessage(releaseMsg);
       saveMessagesToDisk();
-      broadcastMessage(releaseMsg, order.id);
-      return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order), result });
+      postOfferMessage(order, offer, null, `${offer.number} was accepted. Awaiting buyer escrow release.`, "offer_accepted");
+      return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order) });
     } else {
       const isInitialFunding = !orderHasEscrow(order.id);
       if (isInitialFunding) {

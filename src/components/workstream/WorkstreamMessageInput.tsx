@@ -138,7 +138,7 @@ export const WorkstreamMessageInput: React.FC<WorkstreamMessageInputProps> = ({
 
   const headings: Record<WorkstreamOfferKind, { title: string; hint: string; icon: React.ReactNode }> = {
     proposal: { title: 'New Proposal', hint: 'Set the scope, price and delivery time. The buyer accepts it and pays into escrow.', icon: <FileSignature className="w-4 h-4 text-emerald-600" /> },
-    invoice: { title: 'Raise Invoice', hint: 'Bill follow-on work. When the buyer pays, it becomes its own escrow-protected workstream.', icon: <Receipt className="w-4 h-4 text-emerald-600" /> },
+    invoice: { title: 'Final Submission', hint: 'Submit your completed work for buyer review. Once approved, escrow funds are released.', icon: <FileSignature className="w-4 h-4 text-emerald-600" /> },
     deposit: { title: 'Request Deposit', hint: 'Ask the buyer to fund escrow before you start.', icon: <Lock className="w-4 h-4 text-emerald-600" /> }
   };
 
@@ -161,7 +161,7 @@ export const WorkstreamMessageInput: React.FC<WorkstreamMessageInputProps> = ({
 
           <button type="button" disabled={invoiceOff} title={invoiceOff ? invoiceHint : undefined}
             onClick={() => switchTab('invoice')} className={tabBtn(tab === 'invoice', invoiceOff)}>
-            <Receipt className="w-3.5 h-3.5" /> Raise Invoice
+            <FileSignature className="w-3.5 h-3.5" /> Final Submission
           </button>
 
           <div className="relative" ref={moreRef}>

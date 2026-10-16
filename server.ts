@@ -5722,30 +5722,16 @@ app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimi
       }
       // Final invoice approval releases the original order's existing escrow.
       // It MUST NOT create a new order, child order, or second escrow.
-      const result = releaseOrderFunds(order, caller.name || 'Buyer', `Approved Final Invoice ${offer.number}: ${offer.title}`);
+      // const result = releaseOrderFunds(order, caller.name || 'Buyer', `Approved Final Invoice ${offer.number}: ${offer.title}`);
       offer.status = 'paid';
       offer.resolvedAt = now;
       offer.resolvedBy = caller.id;
       saveOffersToDisk();
       saveOrdersToDisk();
-      const releaseMsg: Message = {
-        id: 'msg_' + Date.now(),
-        orderId: order.id,
-        senderId: 'system',
-        senderName: 'WorkSphere Escrow Vault',
-        text: `🎉 Final Invoice ${offer.number} approved! Escrow funds ($${order.amount.toLocaleString()}) released to seller. Order marked as completed.`,
-        timestamp: new Date().toISOString(),
-        type: 'system',
-        metadata: {
-          action: 'escrow_released',
-          amount: order.amount,
-          offerId: offer.id
-        }
-      };
-      recordMessage(releaseMsg);
       saveMessagesToDisk();
-      broadcastMessage(releaseMsg, order.id);
-      return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order), result });
+      postOfferMessage(order, offer, null, `${offer.number} was accepted. Awaiting buyer escrow release.`, 'offer_accepted');
+      return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order) });
+
     } else {
       // Every separately accepted proposal / project / additional work creates a new independent order + workstream + escrow.
       // If the inquiry order was already funded, this is additional work (new order).
