@@ -5738,7 +5738,8 @@ app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimi
       // If it's the first proposal on an inquiry (unfunded), we can either fund the inquiry order directly,
       // or spawn a fresh work order. To adhere strictly to the "Separately accepted Project → NEW Order" rule:
       
-      const isInitialFunding = !orderHasEscrow(order.id);
+      const isProjectProposal = !!order.projectId && offer.kind === 'proposal';
+      const isInitialFunding = !orderHasEscrow(order.id) && !isProjectProposal;
       
       if (isInitialFunding) {
          // Initial proposal on an unfunded inquiry: funds this order's escrow directly

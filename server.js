@@ -36053,7 +36053,8 @@ app.post("/api/offers/:id/:action(accept|decline|cancel)", requireAuth, rateLimi
       postOfferMessage(order, offer, null, `${offer.number} was accepted. Awaiting buyer escrow release.`, "offer_accepted");
       return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order) });
     } else {
-      const isInitialFunding = !orderHasEscrow(order.id);
+      const isProjectProposal = !!order.projectId && offer.kind === "proposal";
+      const isInitialFunding = !orderHasEscrow(order.id) && !isProjectProposal;
       if (isInitialFunding) {
         if (order.status !== "in_progress") {
           return res.status(409).json({ error: "Cannot fund escrow for order in current status." });
