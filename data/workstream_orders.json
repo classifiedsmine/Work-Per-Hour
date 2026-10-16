@@ -1,0 +1,129 @@
+[
+  {
+    "id": "ord_101",
+    "title": "Need React & Node.js Developer to build Escrow Payment Dashboard",
+    "buyerId": "user_1",
+    "sellerId": "user_3",
+    "amount": 1500,
+    "status": "completed",
+    "createdAt": "2026-03-02",
+    "dueDate": "2026-03-14",
+    "requirements": "Develop responsive React TypeScript frontend, Express REST backend, and 14-day escrow vault architecture.",
+    "deliverables": "Full GitHub repository access, PostgreSQL schema scripts, and deployed staging environment.",
+    "deliverableFiles": [
+      {
+        "id": "del_101_1",
+        "name": "escrow_dashboard_v1.zip",
+        "url": "#",
+        "size": "14.2 MB",
+        "uploadedAt": "2026-03-12"
+      }
+    ],
+    "escrowProtectionStartDate": "2026-03-02",
+    "escrowProtectionEndDate": "2026-03-16",
+    "projectId": "proj_1",
+    "sellerUsername": "marcus_vance",
+    "buyerUsername": "alex_rivera",
+    "serviceTitle": "Need React & Node.js Developer to build Escrow Payment Dashboard",
+    "serviceThumbnail": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&h=500&fit=crop",
+    "serviceUrl": "/project/need-react-and-nodejs-developer-to-build-escrow-payment-dashboard"
+  },
+  {
+    "id": "ord_102",
+    "title": "Figma Design System for B2B Analytics Platform",
+    "buyerId": "user_4",
+    "sellerId": "user_2",
+    "amount": 1200,
+    "status": "completed",
+    "createdAt": "2026-03-06",
+    "dueDate": "2026-03-16",
+    "requirements": "Create comprehensive Figma design tokens, chart components, dark mode variants, and responsive UI kits.",
+    "deliverables": "Master Figma file link and exported SVG vector asset bundle.",
+    "deliverableFiles": [
+      {
+        "id": "del_102_1",
+        "name": "b2b_analytics_design_system.fig",
+        "url": "#",
+        "size": "28.5 MB",
+        "uploadedAt": "2026-03-15"
+      }
+    ],
+    "escrowProtectionStartDate": "2026-03-06",
+    "escrowProtectionEndDate": "2026-03-20",
+    "projectId": "proj_2",
+    "sellerUsername": "elena_rostova",
+    "buyerUsername": "sophia_chen",
+    "serviceTitle": "Figma Design System for B2B Analytics Platform",
+    "serviceThumbnail": "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=800&h=500&fit=crop",
+    "serviceUrl": "/project/figma-design-system-for-b2b-analytics-platform"
+  },
+  {
+    "id": "ord_103",
+    "title": "I will build custom AI agents and ChatGPT API workflows for your product",
+    "buyerId": "user_5",
+    "sellerId": "user_3",
+    "amount": 950,
+    "status": "completed",
+    "createdAt": "2026-03-11",
+    "dueDate": "2026-03-17",
+    "requirements": "Configure Gemini API agent pipeline, custom JSON schema output, and vector search store.",
+    "deliverables": "Python package source code, Docker container, and API integration guide.",
+    "deliverableFiles": [
+      {
+        "id": "del_103_1",
+        "name": "ai_agent_pipeline_source.zip",
+        "url": "#",
+        "size": "8.1 MB",
+        "uploadedAt": "2026-03-16"
+      }
+    ],
+    "escrowProtectionStartDate": "2026-03-11",
+    "escrowProtectionEndDate": "2026-03-25",
+    "gigId": "gig_3",
+    "gigSlug": "i-will-build-custom-ai-agents-and-chatgpt-api-workflows-for-your-product",
+    "sellerUsername": "marcus_vance",
+    "buyerUsername": "david_miller",
+    "serviceTitle": "I will build custom AI agents and ChatGPT API workflows for your product",
+    "serviceThumbnail": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=500&fit=crop",
+    "serviceUrl": "/marcus_vance/i-will-build-custom-ai-agents-and-chatgpt-api-workflows-for-your-product"
+  },
+  {
+    "id": "ord_104",
+    "title": "React Native Mobile Banking App for Fintech Startup",
+    "buyerId": "user_6",
+    "sellerId": "user_5",
+    "amount": 2500,
+    "status": "in_progress",
+    "createdAt": "2026-03-21",
+    "dueDate": "2026-04-10",
+    "requirements": "Build cross-platform iOS and Android mobile app with biometric auth and transaction history screens.",
+    "escrowProtectionStartDate": "2026-03-21",
+    "escrowProtectionEndDate": "2026-04-14",
+    "projectId": "proj_4",
+    "sellerUsername": "david_miller",
+    "buyerUsername": "priya_sharma",
+    "serviceTitle": "React Native Mobile Banking App for Fintech Startup",
+    "serviceThumbnail": "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&h=500&fit=crop",
+    "serviceUrl": "/project/react-native-mobile-banking-app-for-fintech-startup"
+  },
+  {
+    "id": "ord_105",
+    "title": "I will deliver a technical SEO audit and high DA link building campaign",
+    "buyerId": "user_7",
+    "sellerId": "user_4",
+    "amount": 450,
+    "status": "in_progress",
+    "createdAt": "2026-03-26",
+    "dueDate": "2026-03-30",
+    "requirements": "Complete Lighthouse Core Web Vitals audit, JSON-LD schema metadata, and 10 high-authority backlinks.",
+    "escrowProtectionStartDate": "2026-03-26",
+    "escrowProtectionEndDate": "2026-04-09",
+    "gigId": "gig_4",
+    "gigSlug": "i-will-deliver-a-technical-seo-audit-and-high-da-link-building-campaign",
+    "sellerUsername": "sophia_chen",
+    "buyerUsername": "liam_oconnor",
+    "serviceTitle": "I will deliver a technical SEO audit and high DA link building campaign",
+    "serviceThumbnail": "https://images.unsplash.com/photo-1432888622747-4eb9a8efeb07?w=800&h=500&fit=crop",
+    "serviceUrl": "/sophia_chen/i-will-deliver-a-technical-seo-audit-and-high-da-link-building-campaign"
+  }
+]
