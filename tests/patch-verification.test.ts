@@ -66,6 +66,24 @@ async function runTests() {
   // Fund buyer wallet so orders can be placed into escrow
   await api('/api/wallet/deposit', { method: 'POST', token: buyerToken, body: { amount: 5000 } });
 
+  const gigs = (await api('/api/gigs', { token: buyerToken })).json;
+  console.log('Gigs found:', gigs.length);
+  const gigA = gigs.find((g: any) => g.freelancerId === 'user_2');
+  const gigB = gigs.find((g: any) => g.freelancerId === 'user_2' && g.id !== gigA.id);
+  console.log('GigA:', gigA?.id, 'GigB:', gigB?.id);
+  
+  const resA = await api('/api/orders', { method: 'POST', token: buyerToken, body: { gigId: gigA.id, sellerId: gigA.freelancerId, title: gigA.title, amount: gigA.price } });
+  console.log('ResA:', resA.status, resA.json);
+  const orderA = resA.json;
+  console.log('OrderA:', orderA?.id);
+  
+  // 2. Buy Gig B -> Order B + WorkStream B + Escrow B (separate)
+  const resB = await api('/api/orders', { method: 'POST', token: buyerToken, body: { gigId: gigB.id, sellerId: gigB.freelancerId, title: gigB.title, amount: gigB.price } });
+  console.log('ResB:', resB.status, resB.json);
+  const orderB = resB.json;
+  console.log('OrderB:', orderB?.id);
+  assert.notStrictEqual(orderA.id, orderB.id, 'Order A and B must be separate');
+
   // 3. Accept Project C (same seller) -> Order C + WorkStream C + Escrow C (separate)
   const projectRes = await api('/api/projects');
   const projectC = projectRes.json[0];
@@ -74,17 +92,25 @@ async function runTests() {
     token: sellerToken,
     body: { projectId: projectC.id, bidAmount: 100, deliveryDays: 5, coverLetter: 'Project C proposal' }
   });
+  console.log('ProposalRes:', proposalRes.status, proposalRes.json);
   const propId = proposalRes.json.id;
+  const orderCId = proposalRes.json.workstreamOrderId; // This is the ID of the inquiry order
   
   // Accept proposal
-  const acceptRes = await api(`/api/offers/${propId}/accept`, { method: 'POST', token: buyerToken });
-  const orderC = acceptRes.json.newOrder;
-  assert.ok(orderC && orderC.id, 'Project C order created');
-  assert.notStrictEqual(orderC.id, orderA.id, 'Order C is separate');
+  const offersRes = await api(`/api/orders/${orderCId}/offers`, { method: 'GET', token: buyerToken });
+  console.log('OffersRes:', offersRes.status, offersRes.json);
+  const offerC = offersRes.json.offers.find((o: any) => o.kind === 'proposal');
+  assert.ok(offerC && offerC.id, 'Project C offer found');
+  
+  const acceptRes = await api(`/api/offers/${offerC.id}/accept`, { method: 'POST', token: buyerToken });
+  console.log('AcceptRes:', acceptRes.status, acceptRes.json);
+  const orderCRes = acceptRes.json.order;
+  assert.ok(orderCRes && orderCRes.id, 'Project C order created');
+  assert.notStrictEqual(orderCRes.id, orderA.id, 'Order C is separate');
   console.log('✅ Test 3: Project C accepted -> New Order C + WorkStream C + Escrow C created');
 
   // 6. Request revision on Project C -> keep Order C, WorkStream C and Escrow C
-  const rev = await api(`/api/orders/${orderC.id}/revision`, {
+  const rev = await api(`/api/orders/${orderCRes.id}/revision`, {
     method: 'POST',
     token: buyerToken,
     body: { reason: 'Please revise' }

@@ -5391,6 +5391,16 @@ function openProjectChat(project: any, freelancer: any, proposal: Proposal): str
       type: 'message',
       metadata: { action: 'project_proposal' }
     };
+    const offer: WorkstreamOffer = {
+      id: 'off_' + randomUUID().slice(0, 12),
+      number: `PROP-${String(workstreamOffers.filter(o => o.kind === 'proposal').length + 1001)}`,
+      orderId: order.id, kind: 'proposal',
+      title: project.title, amount: proposal.bidAmount, deliveryDays: proposal.deliveryDays,
+      status: 'pending', createdBy: freelancer.id, createdAt: new Date().toISOString()
+    };
+    workstreamOffers.push(offer);
+    saveOffersToDisk();
+    
     recordMessage(msg);
     saveMessagesToDisk();
     broadcastMessage(msg, order.id);
