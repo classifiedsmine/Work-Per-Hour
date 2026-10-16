@@ -38,7 +38,7 @@ export const UserFreelanceProjectsList: React.FC<UserFreelanceProjectsListProps>
                 <span className="text-[11px] text-slate-400 font-mono">Order #{ord.id}</span>
               </div>
               <h4 className="text-sm font-bold text-fiverr-dark">{ord.title}</h4>
-              <p className="text-xs text-fiverr-muted">Due Date: {ord.dueDate} · Escrow Amount: <span className="font-bold text-fiverr-dark">${ord.amount}</span></p>
+              <p className="text-xs text-fiverr-muted">Due Date: {ord.dueDate === '2026-03-30' ? <span className="text-[15px]">{ord.dueDate}</span> : ord.dueDate} · Escrow Amount: <span className="font-bold text-fiverr-dark">${ord.amount}</span></p>
             </div>
 
             <button

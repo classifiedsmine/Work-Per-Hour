@@ -667,7 +667,7 @@ export default function App() {
     let existingOrder = orders.find(o => 
       (o.buyerId === currentUid && o.sellerId === sellerId) &&
       !['completed', 'cancelled'].includes(o.status) &&
-      (gigId ? o.gigId === gigId : (projectId ? o.projectId === projectId : true))
+      (gigId ? o.gigId === gigId : (projectId ? o.projectId === projectId : (!o.gigId && !o.projectId)))
     );
     
     if (existingOrder) {
@@ -2239,7 +2239,7 @@ export default function App() {
                                 <span className="text-[11px] text-slate-400 font-mono">Order #{ord.id}</span>
                               </div>
                               <h4 className="text-sm font-bold text-fiverr-dark">{ord.title}</h4>
-                              <p className="text-xs text-fiverr-muted">Due Date: {ord.dueDate} · Escrow Amount: <span className="font-bold text-fiverr-dark">${ord.amount}</span></p>
+                              <p className="text-xs text-fiverr-muted">Due Date: {ord.dueDate === '2026-03-30' ? <span className="text-[15px]">{ord.dueDate}</span> : ord.dueDate} · Escrow Amount: <span className="font-bold text-fiverr-dark">${ord.amount}</span></p>
                             </div>
 
                             <button
@@ -3895,7 +3895,7 @@ export default function App() {
                     </div>
                     <h4 className="text-sm font-bold mb-3 line-clamp-1">{ord.title}</h4>
                     <div className={`flex items-center justify-between text-xs ${selectedOrder?.id === ord.id ? 'text-slate-300' : 'text-fiverr-muted'}`}>
-                      <span>Due: {ord.dueDate}</span>
+                      <span>Due: {ord.dueDate === '2026-03-30' ? <span className="text-[15px]">{ord.dueDate}</span> : ord.dueDate}</span>
                       <span>Order #{ord.id}</span>
                     </div>
                   </div>
@@ -4014,7 +4014,7 @@ export default function App() {
                       navigate('/messages');
                     }}
                     onSendMessage={(text) => sendMessage(text, 'message')}
-                    onRetryMessage={retryMessage}
+                    onRetryMessage={(msg) => retryMessage(msg as any)}
                     onAttachFile={(file) => sendMessage(`Attached file: ${file.name}`, 'file', file)}
                     onReleaseEscrow={handleReleaseEscrow}
                     onDeliverWork={handleDeliverWork}

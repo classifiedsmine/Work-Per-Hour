@@ -1,6 +1,43 @@
 {
   "journals": [
     {
+      "id": "JRN-e6d03643-cd0d-418a-8e82-cca451920b89",
+      "reference": "seed",
+      "postingDate": "2026-10-16",
+      "timestamp": "2026-10-16 11:30:49",
+      "description": "Deposit (gateway) - Buyer",
+      "eventType": "DEPOSIT_SETTLED",
+      "idempotencyKey": "DEP-seed-0.38972217887251914",
+      "entries": [
+        {
+          "id": "ENT-e6d03643-cd0d-418a-8e82-cca451920b89-1",
+          "journalId": "JRN-e6d03643-cd0d-418a-8e82-cca451920b89",
+          "accountCode": "1020",
+          "accountName": "Payment Processor Clearing",
+          "debit": 100000,
+          "credit": 0,
+          "currency": "USD",
+          "description": "Payment processor clearing - deposit received",
+          "userId": "buyer1"
+        },
+        {
+          "id": "ENT-e6d03643-cd0d-418a-8e82-cca451920b89-2",
+          "journalId": "JRN-e6d03643-cd0d-418a-8e82-cca451920b89",
+          "accountCode": "2010",
+          "accountName": "Buyer Wallets Payable",
+          "debit": 0,
+          "credit": 100000,
+          "currency": "USD",
+          "description": "Credited Buyer available wallet",
+          "userId": "buyer1"
+        }
+      ],
+      "totalDebit": 100000,
+      "totalCredit": 100000,
+      "status": "posted",
+      "actor": "test"
+    },
+    {
       "id": "JRN-ff777684-6100-43fd-b6ad-d036c1cc8102",
       "reference": "seed",
       "postingDate": "2026-10-16",
@@ -5686,6 +5723,19 @@
   ],
   "transactions": [
     {
+      "id": "TXN-e6d03643-cd0d-418a-8e82-cca451920b89",
+      "type": "deposit",
+      "amount": 100000,
+      "currency": "USD",
+      "timestamp": "2026-10-16 11:30:49",
+      "status": "completed",
+      "userId": "buyer1",
+      "userName": "Buyer",
+      "userRole": "buyer",
+      "journalId": "JRN-e6d03643-cd0d-418a-8e82-cca451920b89",
+      "description": "Deposit (gateway) - Buyer"
+    },
+    {
       "id": "TXN-ff777684-6100-43fd-b6ad-d036c1cc8102",
       "type": "deposit",
       "amount": 100000,
@@ -7230,12 +7280,12 @@
         "userEmail": "b@x.com",
         "userRole": "buyer",
         "currency": "USD",
-        "availableBalance": 899234,
+        "availableBalance": 999234,
         "pendingIncoming": 0,
         "fundsOnHold": 830,
         "pendingWithdrawals": 0,
         "status": "active",
-        "lastActivityAt": "2026-10-16 10:16:29",
+        "lastActivityAt": "2026-10-16 11:30:49",
         "createdAt": "2026-10-14 16:24:49"
       }
     ],
@@ -8796,7 +8846,8 @@
     "IDEMP-ORD-FUND-ord_auto_disputed_1792060311306",
     "IDEMP-ORD-FUND-ord_custom_window_1792060311306",
     "IDEMP-REL-ord_custom_window_1792060311306",
-    "DEP-seed-0.049245039802017665"
+    "DEP-seed-0.049245039802017665",
+    "DEP-seed-0.38972217887251914"
   ],
   "escrows": [
     [

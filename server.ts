@@ -3175,12 +3175,30 @@ app.post('/api/payments/escrow/release', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Cannot release escrow: Order is under active dispute. Resolve the dispute first.' });
     }
 
-    // Marketplace rule: once escrow is funded (e.g. the seller raised an invoice and it was paid into escrow),
-    // the buyer may release it at any time. No "work delivered" prerequisite. The ledger check below still
-    // guarantees funds exist, are not already released/refunded, and that disputes block release.
+    // Release security: Buyer release becomes available ONLY after the seller has submitted
+    // the formal final invoice / final submission. Premature release before delivery is strictly rejected.
+    if (!isAdmin) {
+      if (order.status !== 'delivered') {
+        return res.status(400).json({
+          error: `Cannot release escrow: Order is currently in "${order.status}" status. Buyer release becomes available only after the seller submits the formal final invoice / deliverable.`
+        });
+      }
+      const hasDelivery = (Array.isArray(order.deliveryHistory) && order.deliveryHistory.length > 0) ||
+                          (Array.isArray(order.deliverableFiles) && order.deliverableFiles.length > 0);
+      if (!hasDelivery) {
+        return res.status(400).json({
+          error: 'Cannot release escrow: No formal final submission or invoice exists for this order.'
+        });
+      }
+      if (Array.isArray(order.revisions) && order.revisions.some(r => r.status === 'requested')) {
+        return res.status(400).json({
+          error: 'Cannot release escrow: A revision request is currently pending resolution by the seller.'
+        });
+      }
+    }
 
-    // If releasing while in revision, mark all requested revisions as resolved
-    if (order.status === 'revision' && Array.isArray(order.revisions)) {
+    // Mark any requested revisions as resolved upon approval
+    if (Array.isArray(order.revisions)) {
       for (const rev of order.revisions) {
         if (rev.status === 'requested') {
           rev.status = 'resolved';
@@ -3306,10 +3324,12 @@ app.post('/api/payments/escrow/refund', requireAuth, (req, res) => {
 
 // Deposit Escrow for Order - Must strictly go through the double-entry ledger engine
 app.post('/api/payments/escrow/deposit', requireAuth, rateLimit(20, 60_000), (req, res) => {
+  const orderId = String(req.body?.orderId || '');
+  if (!orderId) return res.status(400).json({ error: 'Order ID is required' });
+  acquireOrderLock(orderId);
   try {
     const authUserId = (req as any).authenticatedUserId;
     const caller = users.find(u => u.id === authUserId);
-    const orderId = String(req.body?.orderId || '');
     const order = orderIndex.get(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
 
@@ -3353,6 +3373,8 @@ app.post('/api/payments/escrow/deposit', requireAuth, rateLimit(20, 60_000), (re
     res.json({ success: true, order, newBalance });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  } finally {
+    releaseOrderLock(orderId);
   }
 });
 
@@ -3726,8 +3748,10 @@ app.get('/api/admin/finance/escrow', (req, res) => {
 });
 
 app.post('/api/admin/finance/escrow/:orderId/release', requireAdmin, (req, res) => {
+  const orderId = req.params.orderId;
+  acquireOrderLock(orderId);
   try {
-    const order = orderIndex.get(req.params.orderId);
+    const order = orderIndex.get(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.status === 'completed') {
       return res.status(400).json({ error: 'Order escrow has already been released and completed.' });
@@ -3747,12 +3771,16 @@ app.post('/api/admin/finance/escrow/:orderId/release', requireAdmin, (req, res) 
     res.json({ success: true, order, journal: result.journal, freelancerNet: result.freelancerNet, platformFee: result.platformFee });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  } finally {
+    releaseOrderLock(orderId);
   }
 });
 
 app.post('/api/admin/finance/escrow/:orderId/refund', requireAdmin, (req, res) => {
+  const orderId = req.params.orderId;
+  acquireOrderLock(orderId);
   try {
-    const order = orderIndex.get(req.params.orderId);
+    const order = orderIndex.get(orderId);
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (order.status === 'completed') {
       return res.status(400).json({ error: 'Cannot refund order: Escrow funds have already been released to seller.' });
@@ -3770,6 +3798,8 @@ app.post('/api/admin/finance/escrow/:orderId/refund', requireAdmin, (req, res) =
     res.json({ success: true, order, journal: result.journal });
   } catch (err: any) {
     res.status(400).json({ error: err.message });
+  } finally {
+    releaseOrderLock(orderId);
   }
 });
 
@@ -4756,7 +4786,18 @@ export function processAutoAcceptOrders(customNow?: number): Array<{
       continue;
     }
 
-    // 7. Idempotency key for this order and delivery version
+    // 7. Check if order is currently locked by a concurrent operation
+    if (orderStateLocks.has(order.id)) {
+      continue;
+    }
+
+    try {
+      acquireOrderLock(order.id);
+    } catch {
+      continue;
+    }
+
+    // 8. Idempotency key for this order and delivery version
     const requestKey = `auto_accept_${order.id}_v${latestDelivery.version}`;
 
     try {
@@ -4807,6 +4848,8 @@ export function processAutoAcceptOrders(customNow?: number): Array<{
       });
     } catch (err: any) {
       console.error(`[ReviewWindow] Failed to auto-accept order ${order.id}:`, err);
+    } finally {
+      releaseOrderLock(order.id);
     }
   }
 
@@ -5603,13 +5646,12 @@ app.post('/api/orders/:id/offers', requireAuth, rateLimit(20, 60_000), (req, res
 
     const funded = orderHasEscrow(order.id);
     if (kind === 'invoice') {
-      if (!funded) return res.status(400).json({ error: 'Invoices are for follow-on work on a funded workstream. Send a proposal or deposit request first.' });
-      if (workstreamOffers.filter(o => o.orderId === order.id && o.kind === 'invoice' && o.status === 'pending').length >= 5) {
-        return res.status(409).json({ error: 'Too many unpaid invoices on this workstream.' });
+      if (!funded) return res.status(400).json({ error: 'Final invoices are for completed work on a funded workstream.' });
+      if (workstreamOffers.filter(o => o.orderId === order.id && o.kind === 'invoice' && o.status === 'pending').length >= 1) {
+        return res.status(409).json({ error: 'A final invoice is already pending for this workstream.' });
       }
     } else {
-      if (funded || order.status !== 'in_progress') return res.status(400).json({ error: 'Escrow is already funded for this workstream. Use Raise Invoice for additional work.' });
-      if (workstreamOffers.some(o => o.orderId === order.id && o.kind !== 'invoice' && o.status === 'pending')) {
+      if (workstreamOffers.some(o => o.orderId === order.id && o.kind === kind && o.status === 'pending')) {
         return res.status(409).json({ error: 'There is already a pending proposal or deposit request. Cancel it first.' });
       }
     }
@@ -5630,12 +5672,14 @@ app.post('/api/orders/:id/offers', requireAuth, rateLimit(20, 60_000), (req, res
 });
 
 app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimit(20, 60_000), (req, res) => {
+  const offer = workstreamOffers.find(o => o.id === req.params.id);
+  const order = offer ? orders.find(o => o.id === offer.orderId) : undefined;
+  if (!offer || !order) return res.status(404).json({ error: 'Not found' });
+
+  acquireOrderLock(order.id);
   try {
     const caller = offerCaller(req);
     if (!caller || caller.status !== 'active') return res.status(403).json({ error: 'Account is not active' });
-    const offer = workstreamOffers.find(o => o.id === req.params.id);
-    const order = offer ? orders.find(o => o.id === offer.orderId) : undefined;
-    if (!offer || !order) return res.status(404).json({ error: 'Not found' });
     if (!canAccessOrderWorkstream(caller, order)) return res.status(403).json({ error: 'Forbidden' });
     if (offer.status !== 'pending') return res.status(409).json({ error: `This ${OFFER_LABEL[offer.kind]} is already ${offer.status}.` });
 
@@ -5667,41 +5711,70 @@ app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimi
     let newOrder: any;
 
     if (offer.kind === 'invoice') {
-      const childId = 'ord_' + randomUUID().slice(0, 12);
-      const childTitle = `${offer.title} (${offer.number})`;
-      financeLedger.fundEscrow({ orderId: childId, orderTitle: childTitle, amount: offer.amount, buyerId: order.buyerId, sellerId: order.sellerId, actor: `user:${order.buyerId}` });
-      const child: Order = {
-        id: childId, title: childTitle, buyerId: order.buyerId, sellerId: order.sellerId, amount: offer.amount,
-        status: 'funded_in_escrow', createdAt: today,
-        dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
-        escrowProtectionStartDate: today, escrowProtectionEndDate: protectionEnd,
-        gigId: order.gigId, projectId: order.projectId,
-        feeBreakdown: financeLedger.quoteOrder(offer.amount)
-      };
-      newOrder = enrichOrderWithServiceInfo(child);
-      // recordOrder (not a bare unshift) so the new order is in orderIndex; otherwise its workstream 404s.
-      recordOrder(newOrder);
+      // Final invoice approval releases the original order's existing escrow.
+      // It MUST NOT create a new order, child order, or second escrow.
+      const result = releaseOrderFunds(order, caller.name || 'Buyer', `Approved Final Invoice ${offer.number}: ${offer.title}`);
       offer.status = 'paid';
-      offer.fundedOrderId = childId;
-      // A message on the new order reaches both parties over the socket, so the seller's client learns about it
-      // (unknown order -> order list refresh) instead of only seeing it after a reload.
-      postOfferMessage(newOrder, offer, null, `${offer.number} was paid. Escrow of ${offer.amount} is funded for this workstream.`, 'offer_accepted');
+      offer.resolvedAt = now;
+      offer.resolvedBy = caller.id;
+      saveOffersToDisk();
+      saveOrdersToDisk();
+      const releaseMsg: Message = {
+        id: 'msg_' + Date.now(),
+        orderId: order.id,
+        senderId: 'system',
+        senderName: 'WorkSphere Escrow Vault',
+        text: `🎉 Final Invoice ${offer.number} approved! Escrow funds ($${order.amount.toLocaleString()}) released to seller. Order marked as completed.`,
+        timestamp: new Date().toISOString(),
+        type: 'system',
+        metadata: {
+          action: 'escrow_released',
+          amount: order.amount,
+          offerId: offer.id
+        }
+      };
+      recordMessage(releaseMsg);
+      saveMessagesToDisk();
+      broadcastMessage(releaseMsg, order.id);
+      return res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order), result });
     } else {
-      if (orderHasEscrow(order.id) || order.status !== 'in_progress') {
-        return res.status(409).json({ error: 'Escrow is already funded for this workstream.' });
+      if (orderHasEscrow(order.id)) {
+        // Escrow is already funded on this order, so an accepted proposal is for additional work!
+        // Creates a separate independent order + workstream + escrow for the additional work.
+        const addOrderId = 'ord_' + randomUUID().slice(0, 12);
+        const addOrderTitle = offer.title;
+        financeLedger.fundEscrow({ orderId: addOrderId, orderTitle: addOrderTitle, amount: offer.amount, buyerId: order.buyerId, sellerId: order.sellerId, actor: `user:${order.buyerId}` });
+        const addOrder: Order = {
+          id: addOrderId, title: addOrderTitle, buyerId: order.buyerId, sellerId: order.sellerId, amount: offer.amount,
+          status: 'funded_in_escrow', createdAt: today,
+          dueDate: new Date(Date.now() + (offer.deliveryDays || 7) * 86400000).toISOString().split('T')[0],
+          escrowProtectionStartDate: today, escrowProtectionEndDate: protectionEnd,
+          gigId: order.gigId, projectId: order.projectId,
+          feeBreakdown: financeLedger.quoteOrder(offer.amount)
+        };
+        newOrder = enrichOrderWithServiceInfo(addOrder);
+        recordOrder(newOrder);
+        offer.status = 'accepted';
+        offer.fundedOrderId = addOrderId;
+        postOfferMessage(newOrder, offer, null, `${offer.number} was accepted. Escrow of $${offer.amount} is funded for this additional work.`, 'offer_accepted');
+      } else {
+        // Initial proposal on an unfunded inquiry: funds this order's escrow directly
+        if (order.status !== 'in_progress') {
+          return res.status(409).json({ error: 'Cannot fund escrow for order in current status.' });
+        }
+        const newTitle = offer.kind === 'proposal' && /^inquiry:/i.test(order.title) ? offer.title : order.title;
+        financeLedger.fundEscrow({ orderId: order.id, orderTitle: newTitle, amount: offer.amount, buyerId: order.buyerId, sellerId: order.sellerId, actor: `user:${order.buyerId}` });
+        order.title = newTitle;
+        order.amount = offer.amount;
+        order.status = 'funded_in_escrow';
+        order.escrowProtectionStartDate = today;
+        order.escrowProtectionEndDate = protectionEnd;
+        order.feeBreakdown = financeLedger.quoteOrder(offer.amount);
+        if (offer.kind === 'proposal' && offer.deliveryDays) {
+          order.dueDate = new Date(Date.now() + offer.deliveryDays * 86400000).toISOString().split('T')[0];
+        }
+        offer.status = 'accepted';
       }
-      const newTitle = offer.kind === 'proposal' && /^inquiry:/i.test(order.title) ? offer.title : order.title;
-      financeLedger.fundEscrow({ orderId: order.id, orderTitle: newTitle, amount: offer.amount, buyerId: order.buyerId, sellerId: order.sellerId, actor: `user:${order.buyerId}` });
-      order.title = newTitle;
-      order.amount = offer.amount;
-      order.status = 'funded_in_escrow';
-      order.escrowProtectionStartDate = today;
-      order.escrowProtectionEndDate = protectionEnd;
-      order.feeBreakdown = financeLedger.quoteOrder(offer.amount);
-      if (offer.kind === 'proposal' && offer.deliveryDays) {
-        order.dueDate = new Date(Date.now() + offer.deliveryDays * 86400000).toISOString().split('T')[0];
-      }
-      offer.status = 'accepted';
     }
 
     offer.resolvedAt = now; offer.resolvedBy = caller.id;
@@ -5709,12 +5782,14 @@ app.post('/api/offers/:id/:action(accept|decline|cancel)', requireAuth, rateLimi
     saveOrdersToDisk();
     saveOffersToDisk();
     postOfferMessage(order, offer, null,
-      offer.kind === 'invoice' ? `${offer.number} was paid. A new funded workstream was created for it.` : `${offer.number} was accepted and escrow was funded.`,
+      newOrder ? `${offer.number} was accepted. A new funded workstream was created for the additional work.` : `${offer.number} was accepted and escrow was funded.`,
       'offer_accepted');
     res.json({ offer: viewOffer(offer), order: enrichOrderWithServiceInfo(order), newOrder });
   } catch (err: any) {
     // fundEscrow throws on insufficient balance, frozen wallets, below-minimum amounts, etc. Nothing was changed.
     res.status(400).json({ error: err.message });
+  } finally {
+    releaseOrderLock(order.id);
   }
 });
 

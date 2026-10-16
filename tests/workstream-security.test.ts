@@ -254,10 +254,10 @@ async function run() {
   assert.strictEqual(stolen.status, 400);
   ok('cannot attach another user\'s uploaded file');
 
-  // 8. lifecycle: nothing delivered yet -> buyer MAY release funded escrow without delivery
+  // 8. lifecycle: nothing delivered yet -> buyer MUST NOT be able to release funded escrow without delivery
   const early = await api('/api/payments/escrow/release', { method: 'POST', token: buyer105, body: { orderId: 'ord_105' } });
-  assert.strictEqual(early.status, 200, 'buyer may release funded escrow without prior delivery');
-  ok('funded escrow can be released by buyer without delivery');
+  assert.strictEqual(early.status, 400, 'buyer cannot release funded escrow without prior delivery');
+  ok('funded escrow cannot be released by buyer without delivery');
 
   // 9. delivery validation
   const empty = await api(`/api/orders/${ORDER}/deliverable`, { method: 'POST', token: seller, body: { files: [] } });

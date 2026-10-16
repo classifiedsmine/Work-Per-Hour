@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "id": "msg_1792146414992_6b0q",
+    "orderId": "ord_104",
+    "senderId": "user_9",
+    "senderName": "Nikhil (Master Admin)",
+    "text": "Hi",
+    "timestamp": "2026-10-16T10:26:54.992Z",
+    "type": "message",
+    "metadata": {
+      "clientMessageId": "msg_1792146414999_lo6b"
+    }
+  }
+]

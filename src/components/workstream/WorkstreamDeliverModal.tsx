@@ -69,8 +69,8 @@ export const WorkstreamDeliverModal: React.FC<WorkstreamDeliverModalProps> = ({
               <Send className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-fiverr-dark">Submit Deliverables</h3>
-              <p className="text-[11px] text-slate-400">Order #{order.id}</p>
+              <h3 className="text-base font-bold text-fiverr-dark">Final Invoice & Work Submission</h3>
+              <p className="text-[11px] text-slate-400">Order #{order.id} · Escrow: ${order.amount.toLocaleString()}</p>
             </div>
           </div>
           <button
@@ -156,7 +156,7 @@ export const WorkstreamDeliverModal: React.FC<WorkstreamDeliverModalProps> = ({
 
           <div className="p-3 bg-blue-50/70 text-[11px] text-blue-800 rounded-2xl border border-blue-200 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-            <span>Delivering updates the workstream status and notifies the buyer to inspect completed work.</span>
+            <span>Submitting your final invoice and deliverables initiates the buyer review period to approve and release the funded escrow (${order.amount.toLocaleString()}).</span>
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -171,7 +171,7 @@ export const WorkstreamDeliverModal: React.FC<WorkstreamDeliverModalProps> = ({
               type="submit"
               className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-xs transition cursor-pointer"
             >
-              Submit Deliverable
+              Submit Final Invoice & Work
             </button>
           </div>
         </form>

@@ -179,10 +179,10 @@ export const WorkstreamList: React.FC<WorkstreamListProps> = ({
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <span className="font-mono text-[11px] text-slate-500 whitespace-nowrap block">
+                        <span className={`font-mono text-slate-500 whitespace-nowrap block ${w.dueDate === '2026-03-30' ? 'text-[14px]' : 'text-[11px]'}`}>
                           {w.dueDate || '-'}
                         </span>
-                        <span className="text-[10px] text-slate-400 block font-sans">
+                        <span className={`text-slate-400 block font-sans ${w.createdAt === '2026-03-26' ? 'text-[13px]' : 'text-[10px]'}`}>
                           {w.createdAt || ''}
                         </span>
                       </td>

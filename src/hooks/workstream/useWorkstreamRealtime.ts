@@ -80,6 +80,7 @@ export function useWorkstreamRealtime({
               // One-per-order lifecycle events may already exist locally under a different (client-made) id.
               const singletonAction = incomingMsg.type === 'system' && ['escrow_released', 'review_submitted', 'order_auto_accepted'].includes(incomingMsg.metadata?.action)
                 ? incomingMsg.metadata.action : null;
+              const clientMsgId = incomingMsg.metadata?.clientMessageId;
               const isSame = (m: any) =>
                 m.id === incomingMsg.id ||
                 (clientMsgId && m.metadata?.clientMessageId === clientMsgId) ||

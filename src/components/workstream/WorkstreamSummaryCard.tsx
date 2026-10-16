@@ -52,14 +52,14 @@ export const WorkstreamSummaryCard: React.FC<WorkstreamSummaryCardProps> = ({
 
           <div className="flex justify-between items-center pt-1">
             <span className="text-slate-400">Created Date</span>
-            <span className="font-bold text-fiverr-dark font-mono text-[11px]">
+            <span className={`font-bold text-fiverr-dark font-mono ${order.createdAt === '2026-03-26' ? 'text-[14px]' : 'text-[11px]'}`}>
               {order.createdAt || 'Recent'}
             </span>
           </div>
 
           <div className="flex justify-between items-center">
             <span className="text-slate-400">Delivery Deadline</span>
-            <span className="font-bold text-orange-600 font-mono text-[11px] flex items-center gap-1">
+            <span className={`font-bold text-orange-600 font-mono flex items-center gap-1 ${order.dueDate === '2026-03-30' ? 'text-[14px]' : 'text-[11px]'}`}>
               <Clock className="w-3 h-3 text-orange-500" />
               <span>{order.dueDate || 'Standard turnaround'}</span>
             </span>
